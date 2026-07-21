@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastembed>=0.8.0",
     "langfuse>=4.14.0",
+    "langgraph>=1.2.9",
     "openai>=2.46.0",
     "python-dotenv>=1.2.2",
     "pyyaml>=6.0.3",
