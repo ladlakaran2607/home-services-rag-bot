@@ -5,12 +5,15 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "fastapi>=0.139.2",
     "fastembed>=0.8.0",
     "langfuse>=4.14.0",
     "langgraph>=1.2.9",
+    "langgraph-checkpoint-postgres>=3.1.0",
     "openai>=2.46.0",
     "psycopg[binary]>=3.3.4",
     "python-dotenv>=1.2.2",
     "pyyaml>=6.0.3",
     "qdrant-client>=1.18.0",
+    "uvicorn[standard]>=0.51.0",
 ]

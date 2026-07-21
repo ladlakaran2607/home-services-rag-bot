@@ -3,12 +3,20 @@
 # Model tiering: cheap-and-fast for routing/judging/summarizing,
 # premium only where the customer actually reads the output.
 MODEL_ROUTER = "gpt-5-mini"
-MODEL_ANSWER = "gpt-5"
+# Answer moved gpt-5 -> gpt-5-mini after P3 latency data: gpt-5 TTFT
+# spiked 28-57s on ~1 in 3 calls (median ~7s), unusable for live chat.
+# Mini is stable/fast/5x cheaper on output. PROVISIONAL until the P4
+# golden-set judge confirms quality parity - raise back if it doesn't.
+MODEL_ANSWER = "gpt-5-mini"
 MODEL_SUMMARY = "gpt-5-mini"
 
 # Keep the answer model from burning hidden reasoning tokens on
 # support questions (P1 finding: output tokens were 81% of cost).
-ANSWER_REASONING_EFFORT = "low"
+# "minimal" chosen after the P3 latency probe: at "low", time-to-first-
+# token was 6.5s of silent thinking; support answers over retrieved
+# context don't need deliberation. Quality parity is verified by the
+# P4 golden-set judge - if it degrades there, this is the knob to raise.
+ANSWER_REASONING_EFFORT = "minimal"
 
 # Retrieval
 QDRANT_URL = "http://localhost:6333"

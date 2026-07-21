@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Summit Chat — Support Console</title>
+<style>
+  :root{
+    --bg:#0f1115; --bg2:#14171d; --bg3:#1a1e26; --panel:#12151b;
+    --border:#232833; --border2:#2c3340;
+    --text:#e7e9ee; --muted:#8b93a3; --faint:#5c6472;
+    --accent:#e8a24a; --accent-dim:#e8a24a26;
+    --green:#4fc38a; --green-dim:#4fc38a1f;
+    --amber:#e8a24a; --amber-dim:#e8a24a1a;
+    --blue:#6aa5e8; --purple:#a58ae8; --red:#e87070;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  .smallcaps{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+
+  /* ── Top bar ── */
+  header{
+    height:56px;flex:0 0 56px;display:flex;align-items:center;gap:20px;
+    padding:0 20px;border-bottom:1px solid var(--border);background:var(--bg2);
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:.01em}
+  .brand .peak{width:22px;height:22px;border-radius:6px;background:var(--accent-dim);color:var(--accent);
+    display:grid;place-items:center;font-size:12px;font-weight:700}
+  .tabs{display:flex;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:2px}
+  .tabs button{padding:5px 14px;border-radius:7px;color:var(--muted);font-size:13px;font-weight:500}
+  .tabs button.on{background:var(--bg);color:var(--text);box-shadow:0 1px 3px #0006}
+  .seg{margin-left:auto;display:flex;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:2px}
+  .seg button{padding:5px 14px;border-radius:7px;color:var(--muted);font-size:13px;font-weight:500}
+  .seg button.on{background:var(--accent-dim);color:var(--accent)}
+  .cmpbtn{
+    padding:6px 16px;border-radius:9px;border:1px solid var(--border2);color:var(--muted);
+    font-size:13px;font-weight:500;transition:border-color .15s,color .15s;
+  }
+  .cmpbtn:hover{border-color:var(--accent);color:var(--accent)}
+  .meter{
+    display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:12px;color:var(--muted);
+    background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:7px 14px;
+    transition:border-color .3s;
+  }
+  .meter.flash{border-color:var(--accent)}
+  .meter b{color:var(--text);font-weight:600}
+  .meter .cost{color:var(--accent)}
+
+  /* ── Views ── */
+  main{flex:1;display:flex;min-height:0}
+  #view-chat{flex:1;display:flex;min-width:0;min-height:0}
+  .chat-col,.trace-col{min-height:0}
+  #view-crm{flex:1;display:none;overflow:auto;padding:28px}
+  body.crm #view-chat{display:none}
+  body.crm #view-crm{display:block}
+
+  /* ── Chat column ── */
+  .chat-col{flex:0 0 65%;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--border)}
+  #banner{
+    display:none;align-items:center;gap:10px;margin:14px 20px 0;padding:10px 14px;
+    background:var(--amber-dim);border:1px solid #e8a24a55;border-radius:var(--radius);
+    color:var(--amber);font-size:13px;font-weight:500;
+  }
+  #banner.show{display:flex}
+  .msgs{flex:1;overflow-y:auto;padding:20px;display:none;flex-direction:column;gap:14px;min-height:0}
+  .msgs.on{display:flex}
+  .msg{max-width:72%;display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+  .msg .bubble{padding:11px 14px;border-radius:var(--radius);font-size:14px;white-space:pre-wrap}
+  .msg.bot{align-self:flex-start}
+  .msg.bot .bubble{background:var(--bg3);border:1px solid var(--border);border-bottom-left-radius:4px}
+  .msg.cust{align-self:flex-end}
+  .msg.cust .bubble{background:var(--accent-dim);border:1px solid #e8a24a3d;border-bottom-right-radius:4px}
+  .msg.handoff .bubble{background:var(--amber-dim);border:1px solid #e8a24a55;color:var(--amber)}
+  .msg .who{font-size:11px;color:var(--faint);padding:0 4px}
+  .msg.cust .who{align-self:flex-end}
+  .stat{font-family:var(--mono);font-size:11px;color:var(--faint);padding:0 4px}
+  .cursor{display:inline-block;width:7px;height:14px;background:var(--accent);vertical-align:-2px;
+    animation:blink 1s steps(2) infinite;border-radius:1px}
+  @keyframes blink{50%{opacity:0}}
+  .sysnote{align-self:center;font-size:12px;color:var(--faint);padding:4px 12px;border:1px dashed var(--border2);border-radius:99px;flex-shrink:0}
+
+  /* composer */
+  .composer-wrap{flex:0 0 auto;padding:14px 20px 18px;border-top:1px solid var(--border);background:var(--bg2)}
+  #chips{display:none;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  #chips.show{display:flex}
+  #chips button{
+    padding:6px 16px;border-radius:99px;border:1px solid #e8a24a55;color:var(--accent);
+    background:var(--accent-dim);font-size:13px;font-weight:500;transition:background .15s;
+  }
+  #chips button:hover{background:#e8a24a3d}
+  .composer{display:flex;gap:10px;align-items:center}
+  #input{
+    flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);
+    padding:11px 14px;color:var(--text);font:inherit;outline:none;
+  }
+  #input:focus{border-color:#e8a24a66}
+  #input::placeholder{color:var(--faint)}
+  #send{
+    padding:11px 20px;border-radius:var(--radius);background:var(--accent);color:#1a1206;
+    font-weight:600;transition:opacity .15s;
+  }
+  #send:disabled{opacity:.4;cursor:default}
+  #human{
+    padding:11px 16px;border-radius:var(--radius);border:1px solid var(--border2);
+    color:var(--muted);font-weight:500;transition:border-color .15s,color .15s;
+  }
+  #human:hover{border-color:var(--amber);color:var(--amber)}
+
+  /* ── Trace panel ── */
+  .trace-col{flex:0 0 35%;display:flex;flex-direction:column;min-width:0;background:var(--panel)}
+  .trace-head{padding:16px 20px 10px;border-bottom:1px solid var(--border)}
+  .tracewrap{flex:1;overflow-y:auto;padding:16px 20px;display:none;flex-direction:column;gap:16px;min-height:0}
+  .tracewrap.on{display:flex}
+  .turn-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;flex-shrink:0}
+  .turn-card .th{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:baseline}
+  .turn-card .th .q{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .steps{padding:8px 6px;display:flex;flex-direction:column}
+  .step{display:flex;gap:10px;padding:7px 8px;border-radius:8px;align-items:flex-start;animation:stepin .25s ease}
+  @keyframes stepin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .step .ic{
+    flex:0 0 22px;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+    font-size:11px;margin-top:1px;
+  }
+  .step .body{min-width:0}
+  .step .lbl{font-size:12px;font-weight:600;letter-spacing:.02em}
+  .step .det{font-family:var(--mono);font-size:11px;color:var(--muted);word-break:break-word}
+  .step .det .list{margin-top:2px;display:flex;flex-direction:column;gap:1px;color:var(--faint)}
+  .step.n-router  .ic{background:#6aa5e824;color:var(--blue)}
+  .step.n-retrieve .ic{background:#a58ae824;color:var(--purple)}
+  .step.n-answer  .ic{background:var(--accent-dim);color:var(--accent)}
+  .step.n-booking .ic{background:var(--green-dim);color:var(--green)}
+  .step.n-escalate .ic{background:var(--amber-dim);color:var(--amber)}
+  .step.n-escalate .lbl,.step.n-escalate .det{color:var(--amber)}
+  .step.n-summarize .ic{background:#8b93a324;color:var(--muted)}
+  .step.n-monolith .ic{background:#8b93a31c;color:var(--faint)}
+  .step.n-monolith .lbl{color:var(--muted)}
+  .step.n-tool .ic{background:#8b93a324;color:var(--muted)}
+  .crmrow{font-family:var(--mono);font-size:11px;color:var(--green);margin-top:3px;
+    background:var(--green-dim);border:1px solid #4fc38a33;border-radius:6px;padding:3px 8px;display:inline-block}
+  .trace-empty{color:var(--faint);font-size:13px;text-align:center;padding:40px 20px}
+
+  /* ── Compare overlay ── */
+  #cmp-overlay{
+    position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;z-index:50;
+  }
+  #cmp-overlay.show{display:flex}
+  .cmp-card{
+    width:min(680px,92vw);background:var(--bg2);border:1px solid var(--border2);
+    border-radius:16px;padding:26px 28px;box-shadow:0 20px 60px #000a;
+  }
+  .cmp-card h3{font-size:16px;font-weight:650;margin-bottom:4px}
+  .cmp-sub{font-size:12px;color:var(--faint);margin-bottom:18px}
+  .cmp-tiles{display:flex;gap:12px;margin-bottom:20px}
+  .tile{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .tile .big{font-size:26px;font-weight:700;color:var(--accent);font-family:var(--mono)}
+  .tile .cap{font-size:11px;color:var(--muted);margin-top:2px}
+  .cmp-card table{width:100%;border-collapse:collapse;font-size:13px}
+  .cmp-card th,.cmp-card td{text-align:right;padding:8px 10px;border-bottom:1px solid var(--border)}
+  .cmp-card th:first-child,.cmp-card td:first-child{text-align:left;color:var(--muted)}
+  .cmp-card th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}
+  .cmp-card td{font-family:var(--mono);font-size:12px}
+  .cmp-card td.ratio{color:var(--accent);font-weight:600}
+  .cmp-note{font-size:12px;color:var(--faint);margin-top:14px}
+  #cmp-close{
+    margin-top:18px;padding:9px 18px;border-radius:10px;border:1px solid var(--border2);
+    color:var(--muted);font-weight:500;
+  }
+  #cmp-close:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* ── CRM view ── */
+  .crm-top{display:flex;align-items:baseline;gap:14px;margin-bottom:20px}
+  .crm-top h2{font-size:16px;font-weight:650}
+  #refresh{
+    margin-left:auto;padding:7px 16px;border-radius:9px;border:1px solid var(--border2);
+    color:var(--muted);font-size:13px;font-weight:500;
+  }
+  #refresh:hover{border-color:var(--accent);color:var(--accent)}
+  .crm-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;overflow:hidden}
+  .crm-card .ch{padding:12px 18px;border-bottom:1px solid var(--border)}
+  #view-crm table{width:100%;border-collapse:collapse;font-size:13px}
+  #view-crm th{text-align:left;padding:9px 18px;font-size:11px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--border);background:var(--bg3)}
+  #view-crm td{padding:10px 18px;border-bottom:1px solid var(--border);color:var(--text)}
+  #view-crm tr:last-child td{border-bottom:none}
+  #view-crm td.mono{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600}
+  .pill.booked,.pill.scheduled{background:var(--green-dim);color:var(--green)}
+  .pill.cancelled{background:#e8707024;color:var(--red)}
+  .pill.completed{background:#6aa5e824;color:var(--blue)}
+  .empty-row td{color:var(--faint);text-align:center;padding:26px}
+  ::-webkit-scrollbar{width:10px}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="peak">▲</span>Summit Chat</div>
+  <div class="tabs">
+    <button id="tab-chat" class="on">Console</button>
+    <button id="tab-crm">CRM</button>
+  </div>
+  <div class="seg">
+    <button id="seg-v1">v1 naive</button>
+    <button id="seg-v2" class="on">v2 optimized</button>
+  </div>
+  <button id="compare-btn" class="cmpbtn">Compare</button>
+  <div class="meter" id="meter">
+    in <b id="m-in">0</b> tk&nbsp;·&nbsp;out <b id="m-out">0</b> tk&nbsp;·&nbsp;<b class="cost" id="m-cost">$0.0000</b>
+  </div>
+</header>
+
+<main>
+  <div id="view-chat">
+    <div class="chat-col">
+      <div id="banner">⚠ A team member has this conversation</div>
+      <div id="messages-v1" class="msgs"></div>
+      <div id="messages-v2" class="msgs on"></div>
+      <div class="composer-wrap">
+        <div id="chips"></div>
+        <div class="composer">
+          <input id="input" autocomplete="off" placeholder="Message…">
+          <button id="send">Send</button>
+          <button id="human">Talk to a human</button>
+        </div>
+      </div>
+    </div>
+    <div class="trace-col">
+      <div class="trace-head"><div class="smallcaps">Behind the scenes · ui-v4</div></div>
+      <div id="trace-v1" class="tracewrap"><div class="trace-empty">v1 steps appear here — each turn is one opaque monolithic call.</div></div>
+      <div id="trace-v2" class="tracewrap on"><div class="trace-empty">Agent steps will appear here as each turn runs.</div></div>
+    </div>
+  </div>
+
+  <div id="view-crm">
+    <div class="crm-top">
+      <h2>CRM</h2>
+      <span class="smallcaps" id="crm-sync"></span>
+      <button id="refresh">Refresh</button>
+    </div>
+    <div class="crm-card">
+      <div class="ch smallcaps">Contacts</div>
+      <table><thead><tr><th>id</th><th>name</th><th>phone</th><th>city</th><th>service line</th><th>created</th></tr></thead>
+      <tbody id="tb-contacts"></tbody></table>
+    </div>
+    <div class="crm-card">
+      <div class="ch smallcaps">Appointments</div>
+      <table><thead><tr><th>id</th><th>contact</th><th>services</th><th>date</th><th>window</th><th>status</th></tr></thead>
+      <tbody id="tb-appts"></tbody></table>
+    </div>
+  </div>
+</main>
+
+<div id="cmp-overlay">
+  <div class="cmp-card">
+    <h3>v1 naive vs v2 optimized</h3>
+    <div class="cmp-sub">Live numbers from this session's two conversations</div>
+    <div id="cmp-body"></div>
+    <button id="cmp-close">Close</button>
+  </div>
+</div>
+
+<script>
+/* Live console for the Summit bot. Events arrive from POST /chat as SSE:
+   step / token / message / totals(cumulative) / done. Each mode (v1|v2)
+   has its own server thread, transcript pane, trace pane, meter, and
+   stats - the toggle switches between two independent conversations. */
+
+const $ = id => document.getElementById(id);
+const NODE_META = {
+  router:   {ic:"⇄", lbl:"router"},
+  retrieve: {ic:"⌕", lbl:"retrieve"},
+  answer:   {ic:"✎", lbl:"answer"},
+  booking:  {ic:"✓", lbl:"booking"},
+  escalate: {ic:"!", lbl:"escalate"},
+  summarize:{ic:"≋", lbl:"summarize"},
+  monolith: {ic:"▮", lbl:"single monolithic call"},
+  tool:     {ic:"⚙", lbl:"tool call"},
+};
+
+let mode = "v2";
+const SESSION = Math.random().toString(36).slice(2, 10);
+const per = {
+  v1: {turns: 0, escalated: false, chips: null,
+       stats: {in: 0, out: 0, cost: 0, secs: 0, turns: 0}},
+  v2: {turns: 0, escalated: false, chips: null,
+       stats: {in: 0, out: 0, cost: 0, secs: 0, turns: 0}},
+};
+let playing = false;
+
+const fmt = n => n.toLocaleString("en-US");
+const fmtCost = c => "$" + c.toFixed(4);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const msgsEl = () => $("messages-" + mode);
+const traceEl = () => $("trace-" + mode);
+
+function renderMeter(){
+  const t = per[mode].stats;
+  $("m-in").textContent = fmt(t.in);
+  $("m-out").textContent = fmt(t.out);
+  $("m-cost").textContent = fmtCost(t.cost);
+}
+function flashMeter(){
+  const m = $("meter");
+  m.classList.add("flash");
+  setTimeout(() => m.classList.remove("flash"), 400);
+}
+
+/* ── scrolling: pin to bottom only when already near it ── */
+function nearBottom(el){ return el.scrollHeight - el.scrollTop - el.clientHeight < 80; }
+function scrollChat(){ const m = msgsEl(); if (nearBottom(m)) m.scrollTop = m.scrollHeight; }
+function scrollTrace(){ const t = traceEl(); if (nearBottom(t)) t.scrollTop = t.scrollHeight; }
+
+/* ── chat rendering ── */
+function addMsg(kind, text, who){
+  const el = document.createElement("div");
+  el.className = "msg " + kind;
+  el.innerHTML = `<div class="who"></div><div class="bubble"></div>`;
+  el.querySelector(".who").textContent = who;
+  el.querySelector(".bubble").textContent = text;
+  msgsEl().appendChild(el);
+  msgsEl().scrollTop = msgsEl().scrollHeight;
+  return el;
+}
+
+function setChips(options){
+  per[mode].chips = options && options.length ? options : null;
+  const c = $("chips");
+  c.innerHTML = "";
+  if (!per[mode].chips){ c.classList.remove("show"); return; }
+  per[mode].chips.forEach(o => {
+    const b = document.createElement("button");
+    b.textContent = o;
+    b.onclick = () => { setChips(null); sendMessage(o); };
+    c.appendChild(b);
+  });
+  c.classList.add("show");
+}
+
+/* ── suggestion pills (v2 only): derived from the router's own routing,
+      zero extra tokens. Canned by design - generating suggestions with
+      the LLM would re-import the cost disease we're demonstrating against. */
+const RELATED = {
+  "water-heaters": "What does the annual descaling cost?",
+  "hvac": "Do you also do insulation?",
+  "plumbing": "What if it's an emergency?",
+  "drain-sewer": "Do you do camera inspections?",
+  "electrical": "What does an EV charger install cost?",
+  "roofing": "Can you bundle solar with a re-roof?",
+  "solar": "Is my roof good enough for solar?",
+  "gutters": "Are gutter guards worth it?",
+  "insulation": "What rebates are available?",
+  "generators": "What size generator do I need?",
+  "smart-home": "Are leak sensors worth it?",
+  "windows-doors": "Do I need permits for windows?",
+  "company": "What does Care Club include?",
+};
+function suggestions(router, bookedThisTurn){
+  if (mode !== "v2" || per.v2.escalated) return null;
+  if (bookedThisTurn) return ["Add another service to my visit", "What should I prep before the visit?"];
+  if (!router) return ["Book a visit", "What services do you offer?"];
+  if (router.intent === "booking") return null;  // mid-collection: let them type
+  const rel = RELATED[router.service_line];
+  return rel ? ["Book a visit", rel] : ["Book a visit", "What services do you offer?"];
+}
+
+/* ── trace rendering ── */
+function newTurnCard(n, userText){
+  traceEl().querySelector(".trace-empty")?.remove();
+  const card = document.createElement("div");
+  card.className = "turn-card";
+  card.innerHTML = `<div class="th"><span class="smallcaps">Turn ${n}</span><span class="q"></span></div><div class="steps"></div>`;
+  card.querySelector(".q").textContent = userText;
+  traceEl().appendChild(card);
+  traceEl().scrollTop = traceEl().scrollHeight;
+  return card.querySelector(".steps");
+}
+function addStep(stepsEl, node, detailHTML){
+  const meta = NODE_META[node] || {ic:"·", lbl:node};
+  const el = document.createElement("div");
+  el.className = "step n-" + node;
+  el.innerHTML = `<div class="ic">${meta.ic}</div><div class="body"><div class="lbl">${meta.lbl}</div><div class="det"></div></div>`;
+  el.querySelector(".det").innerHTML = detailHTML;
+  stepsEl.appendChild(el);
+  scrollTrace();
+  return el;
+}
+
+function stepDetailHTML(node, d){
+  switch(node){
+    case "router":
+      return `${esc(d.service_line ?? "—")} / ${esc(d.intent)} · conf ${Number(d.confidence).toFixed(2)}`;
+    case "retrieve":
+      return d.chunks.length
+        ? `${d.chunks.length} chunks<div class="list">` +
+          d.chunks.map(c => `<span>${Number(c.score).toFixed(3)} ${esc(c.service_line)} · ${esc(c.section)}</span>`).join("") + `</div>`
+        : `0 chunks — nothing relevant in the knowledge base`;
+    case "booking": {
+      const l = d.lead || {};
+      const bits = [l.name, l.phone, l.city].filter(Boolean).map(esc).join(" · ");
+      return (bits || "collecting details…") +
+        (l.name && l.phone ? `<br><span class="crmrow">CRM: contact captured in Postgres</span>` : "");
+    }
+    case "escalate": return "handed off to human";
+    case "summarize": return `history compressed → ${d.kept_messages} msgs + summary`;
+    case "monolith": return esc(d.note);
+    case "tool": return `${esc(d.name)} → ${esc(d.result)}`;
+    default: return "";
+  }
+}
+
+/* ── the live turn runner ── */
+async function runTurn(payload, userText){
+  playing = true;
+  $("send").disabled = true;
+  setChips(null);
+  if (userText) addMsg("cust", userText, "Customer");
+  $("input").value = "";
+  const stepsEl = newTurnCard(++per[mode].turns, userText || "handoff requested");
+  const t0 = performance.now();
+  const prev = {...per[mode].stats};
+
+  let botMsg = null, botBubble = null, botStat = null, answerRow = null;
+  let fullText = "", routerDetail = null, bookedThisTurn = false, escalatedNow = false;
+  const ensureBot = (handoff) => {
+    if (botMsg) return;
+    botMsg = addMsg(handoff ? "bot handoff" : "bot", "", handoff ? "Summit Team" : "Summit Bot");
+    botBubble = botMsg.querySelector(".bubble");
+    botStat = document.createElement("div");
+    botStat.className = "stat";
+    botStat.textContent = "…";
+    botMsg.appendChild(botStat);
+    const cur = document.createElement("span");
+    cur.className = "cursor";
+    botBubble.appendChild(cur);
+  };
+  const appendText = t => {
+    fullText += t;
+    const cur = botBubble.querySelector(".cursor");
+    botBubble.insertBefore(document.createTextNode(t), cur);
+    scrollChat();
+  };
+
+  const handle = ev => {
+    switch(ev.type){
+      case "step":
+        if (ev.node === "router") routerDetail = ev.detail;
+        if (ev.node === "escalate"){ escalatedNow = true; per[mode].escalated = true; $("banner").classList.add("show"); }
+        if (ev.node === "booking" && ev.detail?.lead?.preferred_date) bookedThisTurn = true;
+        addStep(stepsEl, ev.node, stepDetailHTML(ev.node, ev.detail || {}));
+        break;
+      case "token":
+        if (!answerRow) answerRow = addStep(stepsEl, "answer", `streaming…`);
+        ensureBot(false);
+        appendText(ev.text);
+        break;
+      case "message":
+        ensureBot(escalatedNow);
+        appendText(ev.text);
+        break;
+      case "totals": {
+        const st = per[mode].stats;
+        const dIn = ev.in - st.in, dOut = ev.out - st.out, dCost = ev.cost - st.cost;
+        const secs = (performance.now() - t0) / 1000;
+        st.in = ev.in; st.out = ev.out; st.cost = ev.cost;
+        st.secs += secs; st.turns += 1;
+        renderMeter(); flashMeter();
+        if (botStat) botStat.textContent =
+          `${fmt(Math.max(dIn,0))} in · ${fmt(Math.max(dOut,0))} out · ${fmtCost(Math.max(dCost,0))} · ${secs.toFixed(1)}s`;
+        if (answerRow) answerRow.querySelector(".det").innerHTML = `streamed · ${secs.toFixed(1)}s`;
+        break;
+      }
+      case "done":
+        botBubble?.querySelector(".cursor")?.remove();
+        break;
+    }
+  };
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: {"content-type": "application/json"},
+      body: JSON.stringify({thread_id: `${SESSION}-${mode}`, bot: mode, ...payload}),
+    });
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) >= 0){
+        const raw = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 2);
+        if (raw.startsWith("data: ")) handle(JSON.parse(raw.slice(6)));
+      }
+    }
+  } catch (err) {
+    ensureBot(false);
+    botBubble.querySelector(".cursor")?.remove();
+    appendText("[connection error — is the server running?]");
+  }
+
+  // Choice chips beat suggestion pills when the bot posed the question.
+  if (/morning/i.test(fullText) && /afternoon/i.test(fullText) && /\?/.test(fullText)) {
+    setChips(["Morning", "Afternoon"]);
+  } else {
+    setChips(suggestions(routerDetail, bookedThisTurn));
+  }
+
+  playing = false;
+  $("send").disabled = false;
+  $("input").focus();
+}
+
+function sendMessage(text){
+  if (playing || !text) return;
+  runTurn({message: text}, text);
+}
+
+$("send").onclick = () => sendMessage($("input").value.trim());
+$("input").addEventListener("keydown", e => { if (e.key === "Enter") $("send").click(); });
+$("human").onclick = () => { if (!playing) runTurn({action: "escalate"}, null); };
+
+/* ── v1/v2 toggle: two fully separate conversations ── */
+function greet(){
+  addMsg("bot", mode === "v1"
+    ? "Hi! I'm the Summit assistant (naive build). Ask me anything — every question goes through one giant call."
+    : "Hi! I'm Sunny, the Summit Home Services assistant. Twelve trades, one phone number — ask me anything from water heaters to solar, or book a visit.",
+    "Summit Bot");
+}
+function setMode(m){
+  if (playing || m === mode) return;
+  mode = m;
+  $("seg-v1").classList.toggle("on", m === "v1");
+  $("seg-v2").classList.toggle("on", m === "v2");
+  $("messages-v1").classList.toggle("on", m === "v1");
+  $("messages-v2").classList.toggle("on", m === "v2");
+  $("trace-v1").classList.toggle("on", m === "v1");
+  $("trace-v2").classList.toggle("on", m === "v2");
+  $("banner").classList.toggle("show", per[m].escalated);
+  renderMeter();
+  if (msgsEl().children.length === 0) greet();  // first visit: fresh chat
+  // restore this mode's chips
+  const chips = per[m].chips;
+  per[m].chips = null;
+  setChips(chips);
+  $("input").focus();
+}
+$("seg-v1").onclick = () => setMode("v1");
+$("seg-v2").onclick = () => setMode("v2");
+
+/* ── Compare overlay: computed entirely from live session stats ── */
+function compareRow(label, v2v, v1v, fmtFn, ratioFmt){
+  const ratio = v2v > 0 ? v1v / v2v : null;
+  return `<tr><td>${label}</td><td>${fmtFn(v2v)}</td><td>${fmtFn(v1v)}</td>
+    <td class="ratio">${ratio ? ratioFmt(ratio) : "—"}</td></tr>`;
+}
+$("compare-btn").onclick = () => {
+  const a = per.v2.stats, b = per.v1.stats;
+  const body = $("cmp-body");
+  if (!a.turns || !b.turns){
+    body.innerHTML = `<div class="cmp-note">Run at least one turn in <b>both</b> modes first —
+      ask the same questions in v2 and v1, then compare. (v2: ${a.turns} turns · v1: ${b.turns} turns)</div>`;
+  } else {
+    const costX = a.cost > 0 ? (b.cost / a.cost) : 0;
+    const latX = (a.secs / a.turns) > 0 ? (b.secs / b.turns) / (a.secs / a.turns) : 0;
+    const tokX = a.in > 0 ? b.in / a.in : 0;
+    body.innerHTML = `
+      <div class="cmp-tiles">
+        <div class="tile"><div class="big">${costX.toFixed(1)}x</div><div class="cap">v1 cost vs v2</div></div>
+        <div class="tile"><div class="big">${tokX.toFixed(1)}x</div><div class="cap">v1 input tokens vs v2</div></div>
+        <div class="tile"><div class="big">${latX.toFixed(1)}x</div><div class="cap">v1 latency vs v2 (avg/turn)</div></div>
+      </div>
+      <table>
+        <tr><th></th><th>v2 optimized</th><th>v1 naive</th><th>v1 ÷ v2</th></tr>
+        ${compareRow("Turns", a.turns, b.turns, fmt, r => "")}
+        ${compareRow("Prompt tokens", a.in, b.in, fmt, r => r.toFixed(1) + "x")}
+        ${compareRow("Completion tokens", a.out, b.out, fmt, r => r.toFixed(1) + "x")}
+        ${compareRow("Cost", a.cost, b.cost, fmtCost, r => r.toFixed(1) + "x")}
+        ${compareRow("Avg seconds / turn", a.secs / a.turns, b.secs / b.turns,
+                      v => v.toFixed(1) + "s", r => r.toFixed(1) + "x")}
+      </table>
+      <div class="cmp-note">Fair comparison: ask the same questions in both modes. v2 = router +
+        filtered retrieval + summary memory + model tiering; v1 = full knowledge base + full history +
+        all tool schemas, every call.</div>`;
+  }
+  $("cmp-overlay").classList.add("show");
+};
+$("cmp-close").onclick = () => $("cmp-overlay").classList.remove("show");
+$("cmp-overlay").onclick = e => { if (e.target === $("cmp-overlay")) $("cmp-overlay").classList.remove("show"); };
+
+/* ── tabs ── */
+$("tab-chat").onclick = () => { document.body.classList.remove("crm"); $("tab-chat").classList.add("on"); $("tab-crm").classList.remove("on"); };
+$("tab-crm").onclick  = () => { document.body.classList.add("crm");   $("tab-crm").classList.add("on"); $("tab-chat").classList.remove("on"); loadCRM(); };
+
+/* ── CRM view: live from Postgres via GET /crm ── */
+async function loadCRM(){
+  $("crm-sync").textContent = "refreshing…";
+  try {
+    const data = await (await fetch("/crm")).json();
+    const tc = $("tb-contacts"), ta = $("tb-appts");
+    tc.innerHTML = data.contacts.length
+      ? data.contacts.map(c => `<tr><td class="mono">${c.id}</td><td>${esc(c.name)}</td><td class="mono">${esc(c.phone)}</td><td>${esc(c.city)}</td><td class="mono">${esc(c.service_line)}</td><td class="mono">${esc(c.created_at)}</td></tr>`).join("")
+      : `<tr class="empty-row"><td colspan="6">No contacts yet — book an appointment in the console</td></tr>`;
+    ta.innerHTML = data.appointments.length
+      ? data.appointments.map(a => `<tr><td class="mono">${a.id}</td><td>${esc(a.contact)}</td><td class="mono">${(a.services||[]).map(esc).join(", ")}</td><td class="mono">${esc(a.date)}</td><td class="mono">${esc(a.time_window)}</td><td><span class="pill ${esc(a.status)}">${esc(a.status)}</span></td></tr>`).join("")
+      : `<tr class="empty-row"><td colspan="6">No appointments yet</td></tr>`;
+    $("crm-sync").textContent = "synced just now";
+  } catch {
+    $("crm-sync").textContent = "sync failed — server down?";
+  }
+}
+$("refresh").onclick = loadCRM;
+
+/* ── boot ── */
+greet();
+setChips(["How much is a tankless water heater?", "Book a visit"]);
+renderMeter();
+$("input").focus();
+</script>
+</body>
+</html>
