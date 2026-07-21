@@ -78,12 +78,17 @@ def booking(state: State) -> dict:
         lead["service_line"] = state["service_line"]
 
     # 3. DECIDE in code
+    # Eager lead capture: the contact hits the CRM the moment we can
+    # identify them - a booking abandoned halfway is still a lead.
+    lead_id = None
+    if lead.get("name") and lead.get("phone"):
+        lead_id = crm.create_or_update_lead(lead)
+
     missing = [k for k in REQUIRED if not lead.get(k)]
     if missing:
         wanted = " and ".join(ASK_LABELS[k] for k in missing[:2])  # max two asks
         reply = f"Happy to get that booked. Could I get {wanted}?"
     else:
-        lead_id = crm.create_or_update_lead(lead)
         appointment = crm.book_appointment(lead_id, lead)
         window = appointment["window"]
         if appointment.get("already_existed"):

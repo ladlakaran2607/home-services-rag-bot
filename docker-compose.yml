@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: summit-pg
+    ports:
+      - "5433:5432"  # 5433 outside to avoid clashing with any local Postgres
+    environment:
+      POSTGRES_USER: summit
+      POSTGRES_PASSWORD: summit
+      POSTGRES_DB: summit_crm
+    volumes:
+      - summit_pg_data:/var/lib/postgresql/data
+      # Runs once on first boot of an empty volume - creates the CRM tables.
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  nocodb:
+    image: nocodb/nocodb:latest
+    container_name: summit-nocodb
+    ports:
+      - "8080:8080"
+    environment:
+      # NocoDB's SSRF guard blocks data sources on private addresses by
+      # default; our Postgres IS a private address, deliberately.
+      NC_ALLOW_LOCAL_EXTERNAL_DBS: "true"
+    volumes:
+      - summit_nocodb_data:/usr/app/data
+    depends_on:
+      - postgres
+
+volumes:
+  summit_pg_data:
+  summit_nocodb_data:
