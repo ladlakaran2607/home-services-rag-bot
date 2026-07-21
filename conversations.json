@@ -1,0 +1,74 @@
+[
+  {
+    "id": "c1-tankless-booking",
+    "description": "Single-service pricing to booking (today's live session, scripted)",
+    "turns": [
+      "hi, what do you guys do?",
+      "how much is a tankless water heater?",
+      "can I finance that?",
+      "book me in - I'm Karan, 303-555-0142, in Parker, next Tuesday morning"
+    ]
+  },
+  {
+    "id": "c2-furnace-repair-replace",
+    "description": "HVAC FAQ: repair vs replace judgment",
+    "turns": [
+      "my furnace is 17 years old and the blower motor died, is it worth fixing?",
+      "what would a new furnace cost me?",
+      "does the quote visit cost anything?"
+    ]
+  },
+  {
+    "id": "c3-burst-pipe-emergency",
+    "description": "Plumbing emergency: urgency handling and dispatch info",
+    "turns": [
+      "a pipe just burst in my basement and water is everywhere, what do I do?",
+      "how fast can someone get here? I'm in Lakewood",
+      "what will the emergency visit cost?"
+    ]
+  },
+  {
+    "id": "c4-roof-solar-bundle",
+    "description": "Cross-service: roof condition + solar, bundle discount",
+    "turns": [
+      "I want solar panels but my roof is 18 years old, what should I do?",
+      "what would roof plus solar roughly cost together?",
+      "is there any discount for doing both at once?"
+    ]
+  },
+  {
+    "id": "c5-out-of-scope",
+    "description": "Out-of-scope request: should decline politely, not invent services",
+    "turns": [
+      "hey, do you guys install swimming pools?",
+      "ok what about landscaping?"
+    ]
+  },
+  {
+    "id": "c6-service-area-lead",
+    "description": "Service-area check outside the list + lead capture",
+    "turns": [
+      "do you serve Boulder?",
+      "ok, I still want a quote for gutter guards, I'm Priya, 720-555-0177",
+      "how much are gutter guards usually?"
+    ]
+  },
+  {
+    "id": "c7-membership-financing",
+    "description": "Company-level: Care Club value + financing rules",
+    "turns": [
+      "what do I get with the Summit Care Club membership?",
+      "if I need a $900 repair, can I finance it?",
+      "what about a $6,000 job, what are my options?"
+    ]
+  },
+  {
+    "id": "c8-ice-dams",
+    "description": "Cross-service diagnosis: gutters symptom, insulation root cause",
+    "turns": [
+      "I get huge ice dams on my gutters every winter, can you fix that?",
+      "so should I get heat cables or fix the attic?",
+      "what would the attic option cost?"
+    ]
+  }
+]
